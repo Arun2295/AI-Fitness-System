@@ -35,4 +35,14 @@ public class Controller {
         }
     }
 
+    @GetMapping("/goal/{goal}")
+    public ResponseEntity<?> getUsersByGoal(@PathVariable com.aifitness.userservice.Enum.Goal goal) {
+        List<Entity> users = service.getByGoal(goal);
+        if (users != null && !users.isEmpty()) {
+            return ResponseEntity.ok(users);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    } 
+
 }

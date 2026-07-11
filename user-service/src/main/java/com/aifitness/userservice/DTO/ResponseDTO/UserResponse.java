@@ -4,11 +4,17 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.aifitness.userservice.Enum.Role;l
+import com.aifitness.userservice.Enum.Role;
 import com.aifitness.userservice.Enum.ActivityLevel;
 import com.aifitness.userservice.Enum.Goal;
 import com.aifitness.userservice.Enum.Gender;
 
+
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 
 public class UserResponse {
 

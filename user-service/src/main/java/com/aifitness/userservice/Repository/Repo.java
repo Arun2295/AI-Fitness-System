@@ -1,9 +1,10 @@
 package com.aifitness.userservice.Repository;
 
 import com.aifitness.userservice.Entity.Entity;
+import com.aifitness.userservice.Enum.Goal;
+
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,7 @@ public interface Repo extends MongoRepository<Entity, String> {
 
     // Find users by last name
     List<Entity> findByLastName(String lastName);
+
 
     // Find users by gender
     List<Entity> findByGender(com.aifitness.userservice.Enum.Gender gender);
