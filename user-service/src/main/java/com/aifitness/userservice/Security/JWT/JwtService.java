@@ -14,7 +14,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.SignatureException;
+import io.jsonwebtoken.security.SignatureException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
@@ -68,7 +68,7 @@ public class JwtService {
         return buildToken(claims, email, refreshTokenExpiration);   
     }
 
-    // genrate token with claims
+    // generate token with claims
     private String buildToken(Map<String, Object> extractClaims, String subject,  long expiration){
         return Jwts.builder()
                 .claims(extractClaims)
