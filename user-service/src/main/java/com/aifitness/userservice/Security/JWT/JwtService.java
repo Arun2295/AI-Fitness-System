@@ -21,16 +21,6 @@ import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.io.Decoders;
 import javax.crypto.SecretKey;
 import java.util.function.Function;
-import java.util.Base64;
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.SecretKeySpec;
-
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

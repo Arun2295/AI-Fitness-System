@@ -1,27 +1,30 @@
 package com.aifitness.userservice.Service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import com.aifitness.userservice.Repository.Repo;
+
+import com.aifitness.userservice.DTO.RequestDTO.LoginRequest;
+import com.aifitness.userservice.DTO.RequestDTO.RefreshTokenRequest;
 import com.aifitness.userservice.DTO.RequestDTO.RegisterRequest;
-import com.aifitness.userservice.Repository.RefreshTokenRepository;
-import com.aifitness.userservice.Security.JWT.JwtService;
-
-import ch.qos.logback.classic.Logger;
-
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.authentication.AuthenticationManager;
 import com.aifitness.userservice.DTO.ResponseDTO.AuthResponse;
+import com.aifitness.userservice.DTO.ResponseDTO.UserResponse;
 import com.aifitness.userservice.Entity.Entity;
+import com.aifitness.userservice.Entity.RefreshToken;
 import com.aifitness.userservice.Enum.Role;
+import com.aifitness.userservice.Repository.RefreshTokenRepository;
+import com.aifitness.userservice.Repository.Repo;
+import com.aifitness.userservice.Security.JWT.JwtService;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import java.time.Instant;
+import java.util.UUID;
+import java.util.Optional;
+import java.util.Date;
+
 
 
 
@@ -84,13 +87,39 @@ public class AuthService {
                 .refreshTokenExpiration(jwtService.getRefreshTokenExpiration())
                 .user(mapToUserResponse(savedUser))
                 .build();
-
-
-
-
-
         
         
+    }
+
+    //login user
+
+    public AuthResponse login(LoginRequest request){
+
+        try{
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+
+        }catch(BadCredentialsException e){
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        Entity user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+
+        refreshTokenRepository.deleteByUserId(user.getId());
+        
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+        String refreshToken = createRefreshToken(user.getId());
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .accessTokenExpiration(jwtService.getAccessTokenExpiration())
+                .refreshTokenExpiration(jwtService.getRefreshTokenExpiration())
+                .user(mapToUserResponse(user))
+                .build();
+
     }
 
 
