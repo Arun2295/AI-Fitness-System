@@ -15,11 +15,11 @@ import lombok.NoArgsConstructor;
 
 public class AuthResponse {
 
-    private String accesstoken;
+    private String accessToken;
     private String refreshToken;
     private String tokenType;
-    private Long accessTokenExpiry;
-    private Long refreshTokenExpiry;
+    private Long accessTokenExpiration;
+    private Long refreshTokenExpiration;
     private UserResponse user;
 
 
