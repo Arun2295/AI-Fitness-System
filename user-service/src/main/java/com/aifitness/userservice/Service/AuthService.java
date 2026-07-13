@@ -12,6 +12,8 @@ import com.aifitness.userservice.Enum.Role;
 import com.aifitness.userservice.Repository.RefreshTokenRepository;
 import com.aifitness.userservice.Repository.Repo;
 import com.aifitness.userservice.Security.JWT.JwtService;
+
+//import org.hibernate.validator.internal.util.logging.Log_.logger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,8 @@ import java.util.Date;
 
 @Service
 public class AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     @Autowired
     private Repo userRepository;
@@ -121,6 +125,91 @@ public class AuthService {
                 .build();
 
     }
+
+
+    //REfresh TOKen
+    
+    public AuthResponse refreshToken(RefreshTokenRequest request){
+
+        RefreshToken token  = refreshTokenRepository.findByToken(request.getRefreshToken())
+                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+
+
+        //check refresh token isvalid
+        if(token.isExpired()){
+            refreshTokenRepository.deleteByToken(token.getToken());
+            throw new RuntimeException("Refresh token expired");
+        }
+
+        Entity user  = userRepository.findById(token.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+
+                String newaccessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+
+        logger.info("New access token generated for user: {}", user.getEmail());
+
+        return AuthResponse.builder()
+                .accessToken(newaccessToken)
+                .refreshToken(token.getToken())
+                .tokenType("Bearer")
+                .accessTokenExpiration(jwtService.getAccessTokenExpiration())
+                .refreshTokenExpiration(token.getExpiresAt().toEpochMilli()-Instant.now().toEpochMilli())
+                .user(mapToUserResponse(user))
+                .build();
+    }
+
+
+
+    //logout
+    public void logout(String userId){
+        
+        refreshTokenRepository.deleteByUserId(userId);
+        logger.info("User with ID {} logged out successfully", userId);
+    }
+
+    //create and stored refresh token in db
+
+    private String createRefreshToken(String userId){
+
+        String tokenValue = UUID.randomUUID().toString();
+
+        RefreshToken refreshToken = RefreshToken.builder()
+                .userId(userId)
+                .token(tokenValue)
+                .expiresAt(Instant.now().plusMillis(jwtService.getRefreshTokenExpiration()))
+                .createdAt(Instant.now())
+                .build();
+
+
+            refreshTokenRepository.save(refreshToken);
+            return tokenValue;
+
+
+
+    }
+
+    private UserResponse mapToUserResponse(Entity user){
+        return UserResponse.builder()
+                .id(user.getId())
+                .name(user.getFirstName() + " " + user.getLastName())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhone())
+                .role(user.getRole())
+                .gender(user.getGender())
+                .height(user.getHeight())
+                .weight(user.getWeight())
+                .age(user.getAge())
+                .activityLevel(user.getActivityLevel())
+                .goal(user.getGoal())
+                .build();
+    }
+        
+
+
+
+
+
 
 
 }
