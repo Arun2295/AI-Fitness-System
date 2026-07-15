@@ -7,6 +7,8 @@ import com.aifitness.userservice.Enum.ActivityLevel;
 import com.aifitness.userservice.Enum.Goal;
 import com.aifitness.userservice.Enum.Role;
 
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,7 +16,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-
+@Document(collection = "users")
 public class Entity {
 
     @Id
@@ -27,10 +29,10 @@ public class Entity {
     private String phone;
     private Gender gender;
 
-    //Authorization information
+    // Authorization information
     private Role role;
 
-    //Personal infomation
+    // Personal infomation
 
     private Double height;
     private Double weight;
@@ -38,6 +40,4 @@ public class Entity {
     private ActivityLevel activityLevel;
     private Goal goal;
 
-
-
-}
+} 

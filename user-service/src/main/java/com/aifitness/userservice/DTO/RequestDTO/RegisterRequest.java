@@ -1,6 +1,8 @@
 package com.aifitness.userservice.DTO.RequestDTO;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import com.aifitness.userservice.Enum.Gender;
@@ -25,22 +27,23 @@ public class RegisterRequest {
     @NotBlank
     private String phone;
 
-    @NotBlank
+    @NotNull
     private Gender gender;
 
-    @NotBlank
+    @NotNull
     private Double height;
 
-    @NotBlank
+    @NotNull
     private Double weight;
 
-    @NotBlank
-    private int age;
+    @NotNull
+    @Min(value = 1, message = "Age must be a positive number")
+    private Integer age;
 
-    @NotBlank
+    @NotNull
     private ActivityLevel activityLevel;
 
-    @NotBlank
+    @NotNull
     private Goal goal;
 
 
