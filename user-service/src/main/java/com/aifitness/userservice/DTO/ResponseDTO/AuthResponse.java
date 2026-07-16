@@ -15,12 +15,13 @@ import lombok.NoArgsConstructor;
 
 public class AuthResponse {
 
-    private String accessToken;
+    private String accesstoken;
     private String refreshToken;
     private String tokenType;
-    private Long accessTokenExpiration;
-    private Long refreshTokenExpiration;
+    private Long accessTokenExpiry;
+    private Long refreshTokenExpiry;
     private UserResponse user;
+    private boolean profileComplete;
 
 
 }
