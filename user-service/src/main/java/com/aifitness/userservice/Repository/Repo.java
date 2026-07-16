@@ -36,4 +36,7 @@ public interface Repo extends MongoRepository<Entity, String> {
     // Find users by role
     List<Entity> findByRole(com.aifitness.userservice.Enum.Role role);
 
+    //find user by authprovider and email
+    Optional<Entity> findByAuthProviderAndEmail(com.aifitness.userservice.Enum.AuthProvider authProvider, String email);
+
 }
