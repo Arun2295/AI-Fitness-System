@@ -5,11 +5,13 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.Instant;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @Document(collection = "refresh_tokens")
