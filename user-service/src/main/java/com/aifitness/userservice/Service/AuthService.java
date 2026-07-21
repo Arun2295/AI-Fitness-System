@@ -8,11 +8,11 @@ import com.aifitness.userservice.DTO.ResponseDTO.UserResponse;
 import com.aifitness.userservice.Entity.Entity;
 import com.aifitness.userservice.Entity.RefreshToken;
 import com.aifitness.userservice.Enum.Role;
+import com.aifitness.userservice.Enum.AuthProvider;
 import com.aifitness.userservice.Repository.RefreshTokenRepository;
 import com.aifitness.userservice.Repository.Repo;
 import com.aifitness.userservice.Security.JWT.JwtService;
 
-//import org.hibernate.validator.internal.util.logging.Log_.logger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.Optional;
-import java.util.Date;
 
 @Service
 public class AuthService {
@@ -62,6 +61,7 @@ public class AuthService {
         user.setPhone(request.getPhone());
         user.setGender(request.getGender());
         user.setRole(Role.USER); // Set default role
+        user.setAuthProvider(AuthProvider.LOCAL); // Local email/password registration
         user.setHeight(request.getHeight());
         user.setWeight(request.getWeight());
         user.setAge(request.getAge());
@@ -70,7 +70,6 @@ public class AuthService {
 
         Entity savedUser = userRepository.save(user);
 
-        // gen accss token
         String accessToken = jwtService.generateAccessToken(savedUser.getId(), savedUser.getEmail(),
                 savedUser.getRole().name());
 
@@ -118,7 +117,7 @@ public class AuthService {
 
     }
 
-    // REfresh TOKen
+    // Refresh Token
 
     public AuthResponse refreshToken(RefreshTokenRequest request) {
 
@@ -150,20 +149,12 @@ public class AuthService {
 
     // logout
     public void logout(String userId) {
-
         refreshTokenRepository.deleteByUserId(userId);
         logger.info("User with ID {} logged out successfully", userId);
     }
 
-    // generate refresh token (public wrapper for OAuth2 handler)
-    public String generateRefreshToken(String userId) {
-        refreshTokenRepository.deleteByUserId(userId);
-        return createRefreshToken(userId);
-    }
-
-    // create and stored refresh token in db
-
-    private String createRefreshToken(String userId) {
+    // Expose createRefreshToken for SuccessHandler access
+    public String createRefreshToken(String userId) {
 
         String tokenValue = UUID.randomUUID().toString();
 
@@ -194,5 +185,4 @@ public class AuthService {
                 .goal(user.getGoal())
                 .build();
     }
-
 }

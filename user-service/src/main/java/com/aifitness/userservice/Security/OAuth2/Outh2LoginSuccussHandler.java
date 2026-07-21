@@ -25,7 +25,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class Outh2LoginSuccussHandler implements AuthenticationSuccessHandler {
     private static final Logger logger = LoggerFactory.getLogger(Outh2LoginSuccussHandler.class);
 
-    private static final String ACCESS_TOKEN_COOKIE = "access_token";
+    private static final String ACCESS_TOKEN_COOKIE = "accessToken";
     private static final String COOKIE_PATH = "/";
 
     @Autowired
@@ -34,44 +34,45 @@ public class Outh2LoginSuccussHandler implements AuthenticationSuccessHandler {
     @Autowired
     private AuthService authService;
 
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
+    @Value("${app.oauth2.frontend-redirect-url}")
+    private String frontendRedirectUrl;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
-            HttpServletResponse response,
-            org.springframework.security.core.Authentication authentication)
+                                        HttpServletResponse response,
+                                        org.springframework.security.core.Authentication authentication)
             throws java.io.IOException, ServletException {
 
         CustomeOauth2User oauth2User = (CustomeOauth2User) authentication.getPrincipal();
         Entity user = oauth2User.getUser();
         logger.info("OAuth2 login process completed for User: {}", user.getEmail());
-
+        
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());
 
-        String refreshToken = authService.generateRefreshToken(user.getId());
+        String refreshToken = authService.createRefreshToken(user.getId());
 
         ResponseCookie accessTokenCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE, accessToken)
-                .httpOnly(true)
+                .httpOnly(false)
                 .secure(false)
                 .sameSite("Lax")
                 .path(COOKIE_PATH)
                 .maxAge(jwtService.getAccessTokenExpiration() / 1000)
-                // 1 hour
+                 // 1 hour
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
 
         boolean profileComplete = checkProfileCompletion(user);
 
-        String redirectUrl = frontendUrl + "?refreshToken=" + URLEncoder.encode(refreshToken, StandardCharsets.UTF_8)
+        String redirectUrl = frontendRedirectUrl
+                + "?refreshToken=" + URLEncoder.encode(refreshToken, StandardCharsets.UTF_8)
                 + "&profileComplete=" + profileComplete;
 
         logger.info("Redirecting to frontend URL: {}", redirectUrl);
         response.sendRedirect(redirectUrl);
 
+            
     }
-
     private boolean checkProfileCompletion(Entity user) {
         return user.getGender() != null
                 && user.getHeight() != null
