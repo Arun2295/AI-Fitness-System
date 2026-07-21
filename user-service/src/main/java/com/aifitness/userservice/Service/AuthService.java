@@ -1,6 +1,5 @@
 package com.aifitness.userservice.Service;
 
-
 import com.aifitness.userservice.DTO.RequestDTO.LoginRequest;
 import com.aifitness.userservice.DTO.RequestDTO.RefreshTokenRequest;
 import com.aifitness.userservice.DTO.RequestDTO.RegisterRequest;
@@ -27,11 +26,6 @@ import java.util.UUID;
 import java.util.Optional;
 import java.util.Date;
 
-
-
-
-
-
 @Service
 public class AuthService {
 
@@ -52,12 +46,11 @@ public class AuthService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    // register user
 
-    //register user
+    public AuthResponse register(RegisterRequest request) {
 
-    public AuthResponse  register(RegisterRequest request){
-
-        if(userRepository.existsByEmail(request.getEmail())){
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
 
@@ -76,10 +69,10 @@ public class AuthService {
         user.setGoal(request.getGoal());
 
         Entity savedUser = userRepository.save(user);
-        
 
-        //gen accss token
-        String accessToken = jwtService.generateAccessToken(savedUser.getId(), savedUser.getEmail(), savedUser.getRole().name());
+        // gen accss token
+        String accessToken = jwtService.generateAccessToken(savedUser.getId(), savedUser.getEmail(),
+                savedUser.getRole().name());
 
         String refreshToken = createRefreshToken(savedUser.getId());
 
@@ -91,27 +84,26 @@ public class AuthService {
                 .refreshTokenExpiration(jwtService.getRefreshTokenExpiration())
                 .user(mapToUserResponse(savedUser))
                 .build();
-        
-        
+
     }
 
-    //login user
+    // login user
 
-    public AuthResponse login(LoginRequest request){
+    public AuthResponse login(LoginRequest request) {
 
-        try{
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        try {
+            authenticationManager
+                    .authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
-        }catch(BadCredentialsException e){
+        } catch (BadCredentialsException e) {
             throw new RuntimeException("Invalid email or password");
         }
 
         Entity user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-
         refreshTokenRepository.deleteByUserId(user.getId());
-        
+
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());
         String refreshToken = createRefreshToken(user.getId());
 
@@ -126,26 +118,23 @@ public class AuthService {
 
     }
 
+    // REfresh TOKen
 
-    //REfresh TOKen
-    
-    public AuthResponse refreshToken(RefreshTokenRequest request){
+    public AuthResponse refreshToken(RefreshTokenRequest request) {
 
-        RefreshToken token  = refreshTokenRepository.findByToken(request.getRefreshToken())
+        RefreshToken token = refreshTokenRepository.findByToken(request.getRefreshToken())
                 .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
 
-
-        //check refresh token isvalid
-        if(token.isExpired()){
+        // check refresh token isvalid
+        if (token.isExpired()) {
             refreshTokenRepository.deleteByToken(token.getToken());
             throw new RuntimeException("Refresh token expired");
         }
 
-        Entity user  = userRepository.findById(token.getUserId())
+        Entity user = userRepository.findById(token.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-
-                String newaccessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());
+        String newaccessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());
 
         logger.info("New access token generated for user: {}", user.getEmail());
 
@@ -154,23 +143,27 @@ public class AuthService {
                 .refreshToken(token.getToken())
                 .tokenType("Bearer")
                 .accessTokenExpiration(jwtService.getAccessTokenExpiration())
-                .refreshTokenExpiration(token.getExpiresAt().toEpochMilli()-Instant.now().toEpochMilli())
+                .refreshTokenExpiration(token.getExpiresAt().toEpochMilli() - Instant.now().toEpochMilli())
                 .user(mapToUserResponse(user))
                 .build();
     }
 
+    // logout
+    public void logout(String userId) {
 
-
-    //logout
-    public void logout(String userId){
-        
         refreshTokenRepository.deleteByUserId(userId);
         logger.info("User with ID {} logged out successfully", userId);
     }
 
-    //create and stored refresh token in db
+    // generate refresh token (public wrapper for OAuth2 handler)
+    public String generateRefreshToken(String userId) {
+        refreshTokenRepository.deleteByUserId(userId);
+        return createRefreshToken(userId);
+    }
 
-    private String createRefreshToken(String userId){
+    // create and stored refresh token in db
+
+    private String createRefreshToken(String userId) {
 
         String tokenValue = UUID.randomUUID().toString();
 
@@ -181,15 +174,12 @@ public class AuthService {
                 .createdAt(Instant.now())
                 .build();
 
-
-            refreshTokenRepository.save(refreshToken);
-            return tokenValue;
-
-
+        refreshTokenRepository.save(refreshToken);
+        return tokenValue;
 
     }
 
-    private UserResponse mapToUserResponse(Entity user){
+    private UserResponse mapToUserResponse(Entity user) {
         return UserResponse.builder()
                 .id(user.getId())
                 .name(user.getFirstName() + " " + user.getLastName())
@@ -204,12 +194,5 @@ public class AuthService {
                 .goal(user.getGoal())
                 .build();
     }
-        
-
-
-
-
-
-
 
 }

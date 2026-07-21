@@ -37,4 +37,4 @@ public class CustomeOauth2User implements OAuth2User {
         public Entity getUser(){
             return entity;
         }
-}
+   }

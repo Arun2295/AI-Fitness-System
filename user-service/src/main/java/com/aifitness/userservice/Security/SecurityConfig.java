@@ -15,7 +15,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 
-
 @EnableWebSecurity
 @Configuration
 @EnableMethodSecurity
@@ -27,18 +26,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("api/auth/register",
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("api/auth/register",
                                 "api/auth/login",
                                 "api/auth/refresh",
-                                "actuator/**"
-                ).permitAll()
-                .requestMatchers("api/users/all").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                                "actuator/**")
+                        .permitAll()
+                        .requestMatchers("api/users/all").hasRole("ADMIN")
+                        .anyRequest().authenticated())
+                .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -52,4 +50,3 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 }
-
