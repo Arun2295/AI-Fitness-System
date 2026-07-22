@@ -25,4 +25,7 @@ public class Service {
     }
 
 
+    public Entity getUserByEmail(String email){
+        return repo.findByEmail(email).orElse(null);
+    }
 }

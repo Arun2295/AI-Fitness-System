@@ -41,14 +41,14 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("api/auth/register",
-                                "api/auth/login",
-                                "api/auth/refresh",
+                        .requestMatchers("/api/auth/register",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
                                 "/oauth2/**",
                                 "/login/oauth2/**",
-                                "actuator/**")
+                                "/actuator/**")
                         .permitAll()
-                        .requestMatchers("api/users/all").hasRole("ADMIN")
+                        .requestMatchers("/api/users/all").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo

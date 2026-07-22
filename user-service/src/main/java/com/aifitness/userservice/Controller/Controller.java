@@ -10,6 +10,7 @@ import com.aifitness.userservice.Entity.Entity;
 import org.springframework.http.ResponseEntity;
 import java.util.List;
 import org.springframework.web.bind.annotation.PathVariable;
+import com.aifitness.userservice.DTO.ResponseDTO.UserResponse;
 
 
 @RestController
@@ -45,4 +46,29 @@ public class Controller {
         }
     } 
 
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(org.springframework.security.core.Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.UNAUTHORIZED).body("Not authenticated");
+        }
+        String email = authentication.getName();
+        Entity user = service.getUserByEmail(email);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        UserResponse response = UserResponse.builder()
+                .id(user.getId())
+                .name(user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : ""))
+                .email(user.getEmail())
+                .phoneNumber(user.getPhone())
+                .role(user.getRole())
+                .gender(user.getGender())
+                .height(user.getHeight())
+                .weight(user.getWeight())
+                .age(user.getAge())
+                .activityLevel(user.getActivityLevel())
+                .goal(user.getGoal())
+                .build();
+        return ResponseEntity.ok(response);
+    }
 }

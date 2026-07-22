@@ -32,6 +32,7 @@ public class Outh2LoginSuccussHandler implements AuthenticationSuccessHandler {
     private JwtService jwtService;
 
     @Autowired
+    @org.springframework.context.annotation.Lazy
     private AuthService authService;
 
     @Value("${app.oauth2.frontend-redirect-url}")
