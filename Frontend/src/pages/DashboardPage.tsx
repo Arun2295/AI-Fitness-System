@@ -61,7 +61,7 @@ export default function DashboardPage() {
     return null;
   }
 
-  const bmiVal = bmi(user.height, user.weight);
+  const bmiVal = bmi(user.height ?? 0, user.weight ?? 0);
   const bmiInfo = bmiVal ? bmiCategory(parseFloat(bmiVal)) : null;
   const firstName = user.name?.split(' ')[0] || 'User';
   const initials = user.name
@@ -69,10 +69,10 @@ export default function DashboardPage() {
     : 'U';
 
   const stats = [
-    { icon: '⚖️', label: 'Weight', value: `${user.weight} kg`, change: 'Current' },
-    { icon: '📏', label: 'Height', value: `${user.height} cm`, change: 'Recorded' },
-    { icon: '🎂', label: 'Age', value: `${user.age} yrs`, change: 'Current' },
-    { icon: '📊', label: 'BMI', value: bmiVal ?? '—', change: bmiInfo?.label ?? '' },
+    { icon: '⚖️', label: 'Weight', value: user.weight != null ? `${user.weight} kg` : '—', change: 'Current' },
+    { icon: '📏', label: 'Height', value: user.height != null ? `${user.height} cm` : '—', change: 'Recorded' },
+    { icon: '🎂', label: 'Age', value: user.age ? `${user.age} yrs` : '—', change: 'Current' },
+    { icon: '📊', label: 'BMI', value: bmiVal ?? '—', change: bmiInfo?.label ?? 'Not set' },
   ];
 
   return (

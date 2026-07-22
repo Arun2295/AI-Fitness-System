@@ -9,6 +9,10 @@ import type { UserData } from '../api';
  *
  * The backend sends the user back here after Google login.
  * We store the refresh token and then fetch profile from cookie-protected API.
+ *
+ * IMPORTANT: Use relative URL (/api/users/me) so Vite dev proxy forwards it
+ * to localhost:8081 with the correct cookie — direct cross-origin fetch would
+ * be blocked by the browser's SameSite cookie policy.
  */
 export default function OAuth2CallbackPage() {
   const [params] = useSearchParams();
@@ -25,28 +29,43 @@ export default function OAuth2CallbackPage() {
     }
 
     if (!refreshToken) {
+      console.error('[OAuth2Callback] No refreshToken in URL params');
       navigate('/login');
       return;
     }
 
-    // The access token was set as a cookie by the backend.
-    // Fetch current user profile using that cookie.
-    fetch('http://localhost:8081/api/users/me', {
+    // Use relative URL so Vite proxy sends the request to localhost:8081
+    // while preserving the accessToken cookie that was set by the backend.
+    fetch('/api/users/me', {
       credentials: 'include',
     })
       .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to fetch profile');
+        if (!res.ok) {
+          const text = await res.text().catch(() => 'no body');
+          console.error(`[OAuth2Callback] /api/users/me returned ${res.status}: ${text}`);
+          throw new Error(`HTTP ${res.status}`);
+        }
         return res.json() as Promise<UserData>;
       })
       .then((user) => {
-        setAuth(user, refreshToken);
+        // Backend enums serialize to their name string — normalise
+        const normalised: UserData = {
+          ...user,
+          role: typeof user.role === 'string' ? user.role : String(user.role),
+          gender: typeof user.gender === 'string' ? user.gender : String(user.gender ?? ''),
+          goal: typeof user.goal === 'string' ? user.goal : String(user.goal ?? ''),
+          activityLevel: typeof user.activityLevel === 'string'
+            ? user.activityLevel
+            : String(user.activityLevel ?? ''),
+        };
+        setAuth(normalised, refreshToken);
         navigate('/dashboard');
       })
-      .catch(() => {
-        // If /api/users/me doesn't exist yet, create minimal user from token
-        // and redirect to dashboard anyway — the backend cookie is set.
-        navigate('/login?error=Profile+fetch+failed.+Please+log+in+again.');
+      .catch((err) => {
+        console.error('[OAuth2Callback] Failed to fetch user profile:', err);
+        navigate(`/login?error=${encodeURIComponent('Google sign-in succeeded but profile load failed. Please try again.')}`);
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -67,3 +86,4 @@ export default function OAuth2CallbackPage() {
     </div>
   );
 }
+

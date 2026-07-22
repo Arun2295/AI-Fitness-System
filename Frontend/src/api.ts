@@ -55,14 +55,14 @@ export interface UserData {
   id: string;
   name: string;
   email: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
   role: string;
-  gender: string;
-  height: number;
-  weight: number;
+  gender: string | null;
+  height: number | null;
+  weight: number | null;
   age: number;
-  activityLevel: string;
-  goal: string;
+  activityLevel: string | null;
+  goal: string | null;
 }
 
 export interface AuthData {
