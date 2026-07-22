@@ -44,8 +44,21 @@ public class Outh2LoginSuccussHandler implements AuthenticationSuccessHandler {
                                         org.springframework.security.core.Authentication authentication)
             throws java.io.IOException, ServletException {
 
-        CustomeOauth2User oauth2User = (CustomeOauth2User) authentication.getPrincipal();
-        Entity user = oauth2User.getUser();
+        Entity user;
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof CustomeOauth2User oauth2User) {
+            // Plain OAuth2 flow
+            user = oauth2User.getUser();
+        } else if (principal instanceof OidcCustomUser oidcUser) {
+            // OIDC flow (Google)
+            user = oidcUser.getUser();
+        } else {
+            logger.error("Unexpected principal type in OAuth2 success handler: {}", principal.getClass().getName());
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Unexpected authentication principal type");
+            return;
+        }
+
         logger.info("OAuth2 login process completed for User: {}", user.getEmail());
         
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), user.getRole().name());

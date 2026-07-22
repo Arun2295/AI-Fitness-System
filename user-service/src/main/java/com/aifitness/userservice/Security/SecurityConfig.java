@@ -10,6 +10,7 @@ import com.aifitness.userservice.Security.JWT.AuthenticationFilter;
 import com.aifitness.userservice.Security.OAuth2.CustomOauth2UserService;
 import com.aifitness.userservice.Security.OAuth2.Outh2LoginSuccussHandler;
 import com.aifitness.userservice.Security.OAuth2.OAuth2LoginFailureHandler;
+import com.aifitness.userservice.Security.OAuth2.OidcUserServiceAdapter;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -28,6 +29,9 @@ public class SecurityConfig {
 
     @Autowired
     private CustomOauth2UserService customOAuth2UserService;
+
+    @Autowired
+    private OidcUserServiceAdapter oidcUserServiceAdapter;
 
     @Autowired
     private Outh2LoginSuccussHandler oAuth2LoginSuccessHandler;
@@ -52,7 +56,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOAuth2UserService))
+                                .userService(customOAuth2UserService)
+                                .oidcUserService(oidcUserServiceAdapter))
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler))
                 .addFilterBefore(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
