@@ -1,3 +1,9 @@
+import { Search } from 'lucide-react';
+import AppShell from '../components/layout/AppShell';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -367,7 +373,6 @@ const ARTICLES: Article[] = [
   },
 ];
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
   'All', 'Healthy Eating', 'Protein', 'Carbohydrates', 'Healthy Fats',
@@ -376,481 +381,14 @@ const CATEGORIES = [
   'Gut Health', 'Heart Health', 'Diabetes Nutrition', 'Supplements', 'Recovery Nutrition',
 ];
 
-const CAT_COLORS: Record<string, [string, string]> = {
-  'Protein':            ['rgba(52,211,153,0.12)',  '#34d399'],
-  'Hydration':          ['rgba(34,211,238,0.12)',  '#22d3ee'],
-  'Carbohydrates':      ['rgba(251,191,36,0.12)',  '#fbbf24'],
-  'Healthy Fats':       ['rgba(96,165,250,0.12)',  '#60a5fa'],
-  'Supplements':        ['rgba(167,139,250,0.12)', '#a78bfa'],
-  'Muscle Gain':        ['rgba(52,211,153,0.12)',  '#34d399'],
-  'Gut Health':         ['rgba(74,222,128,0.12)',  '#4ade80'],
-  'Meal Planning':      ['rgba(96,165,250,0.12)',  '#60a5fa'],
-  'Vitamins & Minerals':['rgba(251,191,36,0.12)',  '#fbbf24'],
-  'Sports Nutrition':   ['rgba(248,113,113,0.12)', '#f87171'],
-  'Weight Loss':        ['rgba(248,113,113,0.12)', '#f87171'],
-  'Heart Health':       ['rgba(248,113,113,0.12)', '#f87171'],
-  'Diabetes Nutrition': ['rgba(167,139,250,0.12)', '#a78bfa'],
-  'Recovery Nutrition': ['rgba(34,211,238,0.12)',  '#22d3ee'],
-  'Food Myths':         ['rgba(251,191,36,0.12)',  '#fbbf24'],
-  'Recipes':            ['rgba(52,211,153,0.12)',  '#34d399'],
-  'Healthy Eating':     ['rgba(96,165,250,0.12)',  '#60a5fa'],
-};
-
-const DIFF_COLORS: Record<string, string> = { Beginner: '#34d399', Intermediate: '#fbbf24', Advanced: '#f87171' };
-
-function catBg(cat: string)  { return CAT_COLORS[cat]?.[0] ?? 'rgba(255,255,255,0.08)'; }
-function catClr(cat: string) { return CAT_COLORS[cat]?.[1] ?? '#94a3b8'; }
-
-// ── Article Reader Modal ───────────────────────────────────────────────────
-
-function parseBody(text: string): React.ReactNode[] {
-  return text.split('\n').filter(Boolean).map((line, idx) => {
-    // Table rows
-    if (line.startsWith('|')) {
-      return null; // handled in table block
-    }
-    // Bullet points
-    if (line.startsWith('•') || line.match(/^[•\-\*] /)) {
-      const content = line.replace(/^[•\-\*] /, '');
-      return (
-        <div key={idx} className="nkc-reader-bullet">
-          <span className="nkc-reader-bullet-dot" />
-          <span dangerouslySetInnerHTML={{ __html: formatInline(content) }} />
-        </div>
-      );
-    }
-    // Numbered list
-    if (line.match(/^\d+\./)) {
-      return (
-        <div key={idx} className="nkc-reader-bullet">
-          <span className="nkc-reader-bullet-num">{line.match(/^\d+/)?.[0]}.</span>
-          <span dangerouslySetInnerHTML={{ __html: formatInline(line.replace(/^\d+\./, '').trim()) }} />
-        </div>
-      );
-    }
-    return (
-      <p key={idx} className="nkc-reader-para" dangerouslySetInnerHTML={{ __html: formatInline(line) }} />
-    );
-  }).filter(Boolean);
-}
-
-function formatInline(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\[(.+?)\]\(.+?\)/g, '<span class="nkc-reader-link">$1</span>');
-}
-
-function TableBlock({ text }: { text: string }) {
-  const rows = text.split('\n').filter(r => r.startsWith('|'));
-  if (rows.length < 2) return null;
-  const headers = rows[0].split('|').filter(Boolean).map(h => h.trim());
-  const bodyRows = rows.slice(2); // skip separator row
-  return (
-    <div className="nkc-reader-table-wrap">
-      <table className="nkc-reader-table">
-        <thead>
-          <tr>{headers.map((h, i) => <th key={i}>{h}</th>)}</tr>
-        </thead>
-        <tbody>
-          {bodyRows.map((row, i) => {
-            const cells = row.split('|').filter(Boolean).map(c => c.trim());
-            return <tr key={i}>{cells.map((c, j) => <td key={j}>{c}</td>)}</tr>;
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function ArticleReader({ article, all, onClose, onNavigate }: {
-  article: Article; all: Article[]; onClose: () => void; onNavigate: (a: Article) => void;
-}) {
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const [readProgress, setReadProgress] = useState(0);
-
-  const idx = all.findIndex(a => a.id === article.id);
-  const prev = idx > 0 ? all[idx - 1] : null;
-  const next = idx < all.length - 1 ? all[idx + 1] : null;
-
-  // Keyboard close
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
-
-  // Lock scroll
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  // Reading progress
-  const onScroll = useCallback(() => {
-    const el = bodyRef.current;
-    if (!el) return;
-    const pct = Math.min(100, Math.round((el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100));
-    setReadProgress(isNaN(pct) ? 0 : pct);
-  }, []);
-
-  const clr = catClr(article.category);
-  const related = all.filter(a => a.id !== article.id && a.category === article.category).slice(0, 3);
-
-  return (
-    <div className="nkc-reader-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="nkc-reader-modal">
-        {/* Progress bar */}
-        <div className="nkc-reader-progress">
-          <div className="nkc-reader-progress-fill" style={{ width: `${readProgress}%`, background: clr }} />
-        </div>
-
-        {/* Header */}
-        <div className="nkc-reader-header">
-          <div className="nkc-reader-header-left">
-            <span className="nkc-cat-badge" style={{ background: catBg(article.category), color: clr }}>
-              {article.category}
-            </span>
-            <span className="nkc-diff-badge" style={{ color: DIFF_COLORS[article.difficulty], fontSize: 11, fontWeight: 700 }}>
-              ◉ {article.difficulty}
-            </span>
-            <span className="nkc-read-time">⏱ {article.readTime} min read</span>
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span className="nkc-reader-progress-label">{readProgress}% read</span>
-            <button className="nkc-reader-close" onClick={onClose} title="Close (Esc)">✕</button>
-          </div>
-        </div>
-
-        {/* Scrollable body */}
-        <div className="nkc-reader-body" ref={bodyRef} onScroll={onScroll}>
-
-          {/* Hero */}
-          <div className="nkc-reader-hero" style={{ background: `radial-gradient(ellipse at 30% 50%, ${clr}18 0%, transparent 70%)` }}>
-            <span className="nkc-reader-hero-emoji">{article.emoji}</span>
-            <div>
-              <h1 className="nkc-reader-title">{article.title}</h1>
-              <p className="nkc-reader-excerpt">{article.excerpt}</p>
-
-              <div className="nkc-reader-byline">
-                <div className="nkc-author-avatar" style={{ width: 40, height: 40, fontSize: 13 }}>
-                  {article.author.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{article.author}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{article.authorRole} · Updated {article.updated}</div>
-                </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, fontSize: 12, color: 'var(--text-muted)' }}>
-                  <span>👁 {(article.views / 1000).toFixed(1)}k views</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Key Takeaways */}
-          {article.keyTakeaways && article.keyTakeaways.length > 0 && (
-            <div className="nkc-reader-takeaways">
-              <div className="nkc-reader-takeaways-title">🎯 Key Takeaways</div>
-              {article.keyTakeaways.map((t, i) => (
-                <div key={i} className="nkc-reader-takeaway">
-                  <span style={{ color: clr, fontSize: 18, lineHeight: 1.2, flexShrink: 0 }}>✓</span>
-                  <span>{t}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Article sections */}
-          <div className="nkc-reader-sections">
-            {article.sections.map((section, i) => {
-              const hasTable = section.body.includes('\n|');
-              return (
-                <div key={i} className="nkc-reader-section">
-                  {section.heading && (
-                    <h2 className="nkc-reader-heading" style={{ borderLeftColor: clr }}>
-                      {section.heading}
-                    </h2>
-                  )}
-                  {hasTable ? (
-                    <>
-                      {parseBody(section.body.split('\n|')[0])}
-                      <TableBlock text={'|' + section.body.split('\n|').slice(1).join('\n|')} />
-                      {parseBody(section.body.split('\n|').slice(-1)[0]?.startsWith('**') ? section.body.split('\n|').slice(-1)[0] : '')}
-                    </>
-                  ) : (
-                    parseBody(section.body)
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Tags */}
-          <div className="nkc-reader-tags-row">
-            {article.tags.map(t => (
-              <span key={t} className="nkc-tag">#{t}</span>
-            ))}
-          </div>
-
-          {/* Related Articles */}
-          {related.length > 0 && (
-            <div className="nkc-reader-related">
-              <h3 className="nkc-reader-related-title">📖 Related Articles</h3>
-              <div className="nkc-reader-related-grid">
-                {related.map(a => (
-                  <div key={a.id} className="nkc-reader-related-card" onClick={() => { onNavigate(a); bodyRef.current?.scrollTo({ top: 0 }); }}>
-                    <span style={{ fontSize: 28 }}>{a.emoji}</span>
-                    <div>
-                      <div className="nkc-reader-related-title-text">{a.title}</div>
-                      <div className="nkc-reader-related-meta">{a.readTime} min · {a.difficulty}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Navigation */}
-          <div className="nkc-reader-nav">
-            {prev ? (
-              <button className="nkc-reader-nav-btn" onClick={() => { onNavigate(prev); bodyRef.current?.scrollTo({ top: 0 }); }}>
-                ← {prev.title.slice(0, 40)}{prev.title.length > 40 ? '…' : ''}
-              </button>
-            ) : <div />}
-            {next ? (
-              <button className="nkc-reader-nav-btn nkc-reader-nav-next" onClick={() => { onNavigate(next); bodyRef.current?.scrollTo({ top: 0 }); }}>
-                {next.title.slice(0, 40)}{next.title.length > 40 ? '…' : ''} →
-              </button>
-            ) : <div />}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Article Cards ──────────────────────────────────────────────────────────
-
-function ArticleCard({ article, bookmarks, onBookmark, onOpen, layout = 'grid' }: {
-  article: Article; bookmarks: Set<string>; onBookmark: (id: string) => void;
-  onOpen: (a: Article) => void; layout?: 'grid' | 'list';
-}) {
-  const [hovered, setHovered] = useState(false);
-  const saved = bookmarks.has(article.id);
-  return (
-    <div
-      className={`nkc-card ${layout === 'list' ? 'nkc-card-list' : ''}`}
-      onClick={() => onOpen(article)}
-      style={{ cursor: 'pointer', borderColor: hovered ? catClr(article.category) + '55' : '' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div className="nkc-card-thumb" style={{ background: `radial-gradient(ellipse at 30% 30%, ${catClr(article.category)}22, transparent 70%), linear-gradient(135deg,#0d1526 0%,#0a0f1a 100%)` }}>
-        <span className="nkc-card-emoji">{article.emoji}</span>
-        {article.featured && <span className="nkc-card-badge nkc-badge-featured">⭐ Featured</span>}
-        {article.trending && <span className="nkc-card-badge nkc-badge-trending" style={{ right: 10, left: 'auto' }}>🔥 Trending</span>}
-        <button
-          className={`nkc-bookmark-btn ${saved ? 'nkc-bookmark-active' : ''}`}
-          onClick={e => { e.stopPropagation(); onBookmark(article.id); }}
-        >{saved ? '🔖' : '📌'}</button>
-      </div>
-      <div className="nkc-card-body">
-        <div className="nkc-card-meta">
-          <span className="nkc-cat-badge" style={{ background: catBg(article.category), color: catClr(article.category) }}>{article.category}</span>
-          <span className="nkc-diff-badge" style={{ color: DIFF_COLORS[article.difficulty] }}>◉ {article.difficulty}</span>
-          <span className="nkc-read-time">⏱ {article.readTime} min</span>
-        </div>
-        <h3 className="nkc-card-title">{article.title}</h3>
-        <p className="nkc-card-excerpt">{article.excerpt}</p>
-        <div className="nkc-card-tags">{article.tags.map(t => <span key={t} className="nkc-tag">#{t}</span>)}</div>
-        <div className="nkc-card-footer">
-          <div className="nkc-author">
-            <div className="nkc-author-avatar">{article.author.split(' ').map(n => n[0]).join('').slice(0, 2)}</div>
-            <div>
-              <div className="nkc-author-name">{article.author}</div>
-              <div className="nkc-author-role">{article.authorRole}</div>
-            </div>
-          </div>
-          <div className="nkc-card-stats">
-            <span>👁 {(article.views / 1000).toFixed(1)}k</span>
-            <span>📅 {article.updated}</span>
-          </div>
-        </div>
-        <button
-          className="nkc-read-btn"
-          style={{ borderColor: catClr(article.category) + '55', color: catClr(article.category) }}
-          onClick={e => { e.stopPropagation(); onOpen(article); }}
-        >Read Article →</button>
-      </div>
-    </div>
-  );
-}
-
-function FeaturedCard({ article, bookmarks, onBookmark, onOpen }: {
-  article: Article; bookmarks: Set<string>; onBookmark: (id: string) => void; onOpen: (a: Article) => void;
-}) {
-  const saved = bookmarks.has(article.id);
-  const clr = catClr(article.category);
-  return (
-    <div className="nkc-featured-card" style={{ '--feat-clr': clr, cursor: 'pointer' } as React.CSSProperties} onClick={() => onOpen(article)}>
-      <div className="nkc-featured-emoji">{article.emoji}</div>
-      <div className="nkc-featured-content">
-        <div className="nkc-card-meta" style={{ marginBottom: 10 }}>
-          <span className="nkc-cat-badge" style={{ background: catBg(article.category), color: clr }}>{article.category}</span>
-          <span style={{ color: DIFF_COLORS[article.difficulty], fontSize: 11, fontWeight: 700 }}>◉ {article.difficulty}</span>
-          <span className="nkc-read-time">⏱ {article.readTime} min</span>
-        </div>
-        <h2 className="nkc-featured-title">{article.title}</h2>
-        <p className="nkc-featured-excerpt">{article.excerpt}</p>
-        <div className="nkc-featured-footer">
-          <div className="nkc-author">
-            <div className="nkc-author-avatar">{article.author.split(' ').map(n => n[0]).join('').slice(0, 2)}</div>
-            <div>
-              <div className="nkc-author-name">{article.author}</div>
-              <div className="nkc-author-role">{article.authorRole}</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <button
-              className={`nkc-bookmark-btn ${saved ? 'nkc-bookmark-active' : ''}`}
-              style={{ position: 'static', opacity: 1, transform: 'none', background: 'rgba(255,255,255,0.1)' }}
-              onClick={e => { e.stopPropagation(); onBookmark(article.id); }}
-            >{saved ? '🔖' : '📌'}</button>
-            <button className="nkc-featured-btn" onClick={e => { e.stopPropagation(); onOpen(article); }}>Read Now →</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InfoGraphicCard({ emoji, title, stats }: { emoji: string; title: string; stats: { label: string; value: string; color: string }[] }) {
-  return (
-    <div className="nkc-infographic">
-      <div className="nkc-infographic-header">
-        <span className="nkc-infographic-emoji">{emoji}</span>
-        <h4 className="nkc-infographic-title">{title}</h4>
-      </div>
-      <div className="nkc-infographic-stats">
-        {stats.map((s, i) => (
-          <div key={i} className="nkc-infographic-stat">
-            <div className="nkc-infographic-val" style={{ color: s.color }}>{s.value}</div>
-            <div className="nkc-infographic-lbl">{s.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AINutritionPanel({ user, goal, onOpen }: { user: any; goal: string; onOpen: (a: Article) => void }) {
-  const [aiOpen, setAiOpen] = useState(false);
-  const [chat, setChat] = useState<{ from: 'ai' | 'user'; text: string }[]>([
-    { from: 'ai', text: `Hello! Based on your goal of "${goal}", I've curated personalized articles for you. What nutrition topic can I help you explore?` }
-  ]);
-  const [input, setInput] = useState('');
-  const chatRef = useRef<HTMLDivElement>(null);
-
-  const aiResponses: Record<string, string> = {
-    protein: 'Great question! For your goal, aim for 1.6–2.2g of protein per kg of body weight. Check out our "Complete Guide to Macronutrients" — click it to read the full article!',
-    carb: 'Carbs are your primary fuel. For active individuals, 5–7g/kg/day is a good target. Our Carbohydrates article covers this in depth!',
-    fat: 'Healthy fats are crucial for hormones and brain health. Our "Healthy Fats 101" article explains omega-3s and MCTs in detail.',
-    supplement: 'Creatine monohydrate is the most evidence-backed supplement. See our "Creatine, Whey, and Pre-Workout" article for a full breakdown!',
-    water: 'A practical target is 35–45ml per kg of body weight daily. Our Hydration Science article covers this in detail.',
-    default: 'Great question! Browse our Knowledge Center for in-depth evidence-based articles. Try clicking any article card to read it fully.',
-  };
-
-  const getReply = (msg: string) => {
-    const lower = msg.toLowerCase();
-    if (lower.includes('protein')) return aiResponses.protein;
-    if (lower.includes('carb')) return aiResponses.carb;
-    if (lower.includes('fat')) return aiResponses.fat;
-    if (lower.includes('supplement') || lower.includes('creatine')) return aiResponses.supplement;
-    if (lower.includes('water') || lower.includes('hydrat')) return aiResponses.water;
-    return aiResponses.default;
-  };
-
-  const send = () => {
-    if (!input.trim()) return;
-    const userMsg = { from: 'user' as const, text: input.trim() };
-    const aiMsg = { from: 'ai' as const, text: getReply(input) };
-    setChat(prev => [...prev, userMsg, aiMsg]);
-    setInput('');
-    setTimeout(() => chatRef.current?.scrollTo({ top: 9999, behavior: 'smooth' }), 100);
-  };
-
-  const goalArticles = goal.toLowerCase().includes('muscle') || goal.toLowerCase().includes('gain')
-    ? ARTICLES.filter(a => ['Muscle Gain', 'Protein', 'Supplements', 'Recovery Nutrition'].includes(a.category)).slice(0, 3)
-    : goal.toLowerCase().includes('loss') || goal.toLowerCase().includes('weight')
-    ? ARTICLES.filter(a => ['Weight Loss', 'Meal Planning', 'Healthy Eating', 'Carbohydrates'].includes(a.category)).slice(0, 3)
-    : ARTICLES.filter(a => a.trending).slice(0, 3);
-
-  return (
-    <div className="nkc-ai-panel">
-      <div className="nkc-ai-header" onClick={() => setAiOpen(o => !o)}>
-        <div className="nkc-ai-header-left">
-          <div className="nkc-ai-orb">🤖</div>
-          <div>
-            <div className="nkc-ai-title">AI Nutrition Assistant</div>
-            <div className="nkc-ai-subtitle">Personalized for {user?.name?.split(' ')[0] || 'you'}</div>
-          </div>
-        </div>
-        <div className="nkc-ai-live"><span className="nkc-ai-dot" />Live</div>
-        <span style={{ marginLeft: 8, color: 'var(--text-muted)', transition: 'transform 0.2s', transform: aiOpen ? 'rotate(180deg)' : 'rotate(0)' }}>▾</span>
-      </div>
-      {aiOpen && (
-        <>
-          <div className="nkc-ai-recs">
-            <div className="nkc-ai-rec-label">📚 Recommended for your goal</div>
-            {goalArticles.map(a => (
-              <div key={a.id} className="nkc-ai-rec-item" onClick={() => onOpen(a)}>
-                <span className="nkc-ai-rec-emoji">{a.emoji}</span>
-                <div>
-                  <div className="nkc-ai-rec-title">{a.title}</div>
-                  <div className="nkc-ai-rec-meta">{a.readTime} min · {a.category} · Click to read</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="nkc-ai-chat">
-            <div className="nkc-ai-messages" ref={chatRef}>
-              {chat.map((m, i) => (
-                <div key={i} className={`nkc-ai-msg ${m.from === 'ai' ? 'nkc-ai-msg-ai' : 'nkc-ai-msg-user'}`}>{m.text}</div>
-              ))}
-            </div>
-            <div className="nkc-ai-input-row">
-              <input className="nkc-ai-input" placeholder="Ask about nutrition..." value={input}
-                onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} />
-              <button className="nkc-ai-send" onClick={send}>➤</button>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ── Main Component ────────────────────────────────────────────────────────
-
 export default function NutritionKnowledgePage() {
-  const { user, clearAuth } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const firstName = user?.name?.split(' ')[0] || 'User';
-  const userGoal = (user as any)?.goal || 'General Health';
+  if (!user) { navigate('/login'); return null; }
 
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
-  const [layout, setLayout] = useState<'grid' | 'list'>('grid');
-  const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [openArticle, setOpenArticle] = useState<Article | null>(null);
-  const catScrollRef = useRef<HTMLDivElement>(null);
-
-  const handleLogout = async () => { await clearAuth(); navigate('/login'); };
-  const toggleBookmark = (id: string) => {
-    setBookmarks(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  };
-  const openReader = useCallback((a: Article) => setOpenArticle(a), []);
-  const closeReader = useCallback(() => setOpenArticle(null), []);
 
   const filtered = ARTICLES.filter(a => {
     const matchCat = activeCategory === 'All' || a.category === activeCategory;
@@ -859,269 +397,98 @@ export default function NutritionKnowledgePage() {
   });
 
   const featured = ARTICLES.filter(a => a.featured).slice(0, 2);
-  const trending  = ARTICLES.filter(a => a.trending);
-  const bookmarked = ARTICLES.filter(a => bookmarks.has(a.id));
+  const trending = ARTICLES.filter(a => a.trending);
 
   return (
-    <div className="dashboard nkc-page">
-      {openArticle && (
-        <ArticleReader
-          article={openArticle}
-          all={ARTICLES}
-          onClose={closeReader}
-          onNavigate={a => setOpenArticle(a)}
+    <AppShell>
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Knowledge Center</h1>
+          <p className="text-muted-foreground mt-1">Science-backed guides and articles.</p>
+        </div>
+      </div>
+
+      <div className="relative mb-8">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Input 
+          className="pl-9 bg-card"
+          placeholder="Search articles... (e.g. 'protein timing')"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
         />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-4 mb-4 scrollbar-hide">
+        {CATEGORIES.map(c => (
+          <Button
+            key={c}
+            variant={activeCategory === c ? "default" : "outline"}
+            className="whitespace-nowrap rounded-full"
+            onClick={() => setActiveCategory(c)}
+          >
+            {c}
+          </Button>
+        ))}
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {filtered.map(article => (
+          <Card 
+            key={article.id} 
+            className="cursor-pointer hover:border-primary/50 transition-colors flex flex-col"
+            onClick={() => setOpenArticle(article)}
+          >
+            <CardHeader>
+              <div className="flex justify-between items-start mb-2">
+                <Badge variant="secondary">{article.category}</Badge>
+                <span className="text-xs text-muted-foreground">{article.readTime} min read</span>
+              </div>
+              <CardTitle className="line-clamp-2">{article.emoji} {article.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1">
+              <p className="text-sm text-muted-foreground line-clamp-3">{article.excerpt}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          No articles found matching "{search}"
+        </div>
       )}
 
-      {/* ── Sidebar ── */}
-      <aside className="sidebar">
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">💪</div>
-          <span className="sidebar-logo-text">AI Fitness</span>
-        </div>
-        <nav className="sidebar-nav">
-          <Link className="nav-item" to="/dashboard"><span className="nav-icon">🏠</span> Dashboard</Link>
-          <a className="nav-item" href="#progress"><span className="nav-icon">📈</span> Progress</a>
-          <Link className="nav-item" to="/nutrition"><span className="nav-icon">🥗</span> Nutrition</Link>
-          <Link className="nav-item active" to="/knowledge"><span className="nav-icon">📚</span> Knowledge</Link>
-          <a className="nav-item" href="#workouts"><span className="nav-icon">🏋️</span> Workouts</a>
-          <a className="nav-item" href="#goals"><span className="nav-icon">🎯</span> Goals</a>
-          <a className="nav-item" href="#settings"><span className="nav-icon">⚙️</span> Settings</a>
-        </nav>
-        <div className="nkc-sidebar-section">
-          <div className="nkc-sidebar-title">Quick Topics</div>
-          {CATEGORIES.filter(c => c !== 'All').slice(0, 8).map(c => (
-            <button key={c} className="nkc-sidebar-link" onClick={() => setActiveCategory(c)}
-              style={{ color: activeCategory === c ? catClr(c) : undefined }}>
-              <span style={{ fontSize: 14 }}>{
-                c === 'Protein' ? '💪' : c === 'Hydration' ? '💧' : c === 'Carbohydrates' ? '🌾' :
-                c === 'Healthy Fats' ? '🥑' : c === 'Vitamins & Minerals' ? '☀️' :
-                c === 'Weight Loss' ? '⚖️' : c === 'Muscle Gain' ? '🏋️' : '📖'
-              }</span>{c}
-            </button>
-          ))}
-        </div>
-        <div className="nkc-sidebar-section" style={{ marginTop: 8 }}>
-          <div className="nkc-sidebar-title">🔥 Trending</div>
-          {trending.slice(0, 3).map(a => (
-            <div key={a.id} className="nkc-sidebar-article" onClick={() => openReader(a)}>
-              <span style={{ fontSize: 18 }}>{a.emoji}</span>
-              <div>
-                <div className="nkc-sidebar-article-title">{a.title.slice(0, 38)}…</div>
-                <div className="nkc-sidebar-article-meta">{a.readTime} min · {(a.views / 1000).toFixed(1)}k views</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="sidebar-footer">
-          <button className="nav-item" onClick={handleLogout} style={{ color: '#f87171', width: '100%' }}>
-            <span className="nav-icon">🚪</span> Sign Out
-          </button>
-        </div>
-      </aside>
-
-      {/* ── Main ── */}
-      <main className="main-content nkc-main">
-        {/* Hero */}
-        <div className="nkc-hero">
-          <div className="nkc-hero-bg" />
-          <div className="nkc-hero-content">
-            <div className="nkc-hero-top">
-              <div>
-                <div className="nkc-hero-label">🌿 AI-Powered Education</div>
-                <h1 className="nkc-hero-title">Learn Nutrition</h1>
-                <p className="nkc-hero-sub">Science-backed guides, expert articles, and personalized recommendations to master your nutrition, {firstName}.</p>
-              </div>
-              <div className="nkc-hero-stats">
-                <div className="nkc-hero-stat"><div className="nkc-hero-stat-val">16</div><div className="nkc-hero-stat-lbl">Topics</div></div>
-                <div className="nkc-hero-stat"><div className="nkc-hero-stat-val">{ARTICLES.length}</div><div className="nkc-hero-stat-lbl">Articles</div></div>
-                <div className="nkc-hero-stat"><div className="nkc-hero-stat-val">12</div><div className="nkc-hero-stat-lbl">Experts</div></div>
-              </div>
-            </div>
-            <div className="nkc-search-bar">
-              <span className="nkc-search-icon">🔍</span>
-              <input id="nkc-search-input" className="nkc-search-input"
-                placeholder="Search articles… (e.g. 'protein timing', 'omega-3', 'hydration')"
-                value={search} onChange={e => setSearch(e.target.value)} />
-              {search && <button className="nkc-search-clear" onClick={() => setSearch('')}>✕</button>}
-            </div>
-            <div className="nkc-cat-row" ref={catScrollRef}>
-              {CATEGORIES.map(c => (
-                <button key={c} className={`nkc-cat-pill ${activeCategory === c ? 'nkc-cat-pill-active' : ''}`}
-                  onClick={() => setActiveCategory(c)}
-                  style={activeCategory === c ? { background: catBg(c), color: catClr(c), borderColor: catClr(c) + '55' } : {}}>
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Two-column layout */}
-        <div className="nkc-layout">
-          <div className="nkc-content-col">
-            <AINutritionPanel user={user} goal={userGoal} onOpen={openReader} />
-
-            {activeCategory === 'All' && !search && (
-              <div className="nkc-section">
-                <div className="nkc-section-header">
-                  <span className="nkc-section-icon">⭐</span>
-                  <span>Featured Articles</span>
-                  <span className="nkc-section-count">{featured.length} picks</span>
-                </div>
-                <div className="nkc-featured-grid">
-                  {featured.map(a => <FeaturedCard key={a.id} article={a} bookmarks={bookmarks} onBookmark={toggleBookmark} onOpen={openReader} />)}
-                </div>
-              </div>
-            )}
-
-            {activeCategory === 'All' && !search && (
-              <div className="nkc-section">
-                <div className="nkc-section-header">
-                  <span className="nkc-section-icon">📊</span>
-                  <span>Interactive Nutrition Guides</span>
-                  <span className="nkc-section-count">Quick Reference</span>
-                </div>
-                <div className="nkc-infographic-grid">
-                  <InfoGraphicCard emoji="🥩" title="Protein Sources" stats={[
-                    { label: 'Chicken Breast', value: '31g/100g', color: '#34d399' },
-                    { label: 'Greek Yogurt', value: '10g/100g', color: '#60a5fa' },
-                    { label: 'Eggs', value: '13g/100g', color: '#fbbf24' },
-                    { label: 'Lentils', value: '9g/100g', color: '#a78bfa' },
-                  ]} />
-                  <InfoGraphicCard emoji="💧" title="Hydration Goals" stats={[
-                    { label: 'Sedentary Adult', value: '2.0L/day', color: '#22d3ee' },
-                    { label: 'Active Person', value: '3.0L/day', color: '#60a5fa' },
-                    { label: 'Athlete (Training)', value: '4.0L/day', color: '#34d399' },
-                    { label: 'Per 1hr Exercise', value: '+500ml', color: '#fbbf24' },
-                  ]} />
-                  <InfoGraphicCard emoji="⚡" title="Daily Macro Split" stats={[
-                    { label: 'Protein (Muscle Gain)', value: '30–35%', color: '#34d399' },
-                    { label: 'Carbohydrates', value: '40–50%', color: '#fbbf24' },
-                    { label: 'Healthy Fats', value: '20–30%', color: '#60a5fa' },
-                    { label: 'Fiber Target', value: '25–35g', color: '#a78bfa' },
-                  ]} />
-                  <InfoGraphicCard emoji="🌿" title="Key Micronutrients" stats={[
-                    { label: 'Vitamin D (Adults)', value: '600 IU/day', color: '#fbbf24' },
-                    { label: 'Iron (Women)', value: '18mg/day', color: '#f87171' },
-                    { label: 'Calcium (Adults)', value: '1000mg/day', color: '#60a5fa' },
-                    { label: 'Magnesium', value: '320–420mg', color: '#4ade80' },
-                  ]} />
-                </div>
-              </div>
-            )}
-
-            <div className="nkc-section">
-              <div className="nkc-section-header">
-                <span className="nkc-section-icon">📖</span>
-                <span>{search ? `Results for "${search}"` : activeCategory === 'All' ? 'All Articles' : activeCategory}</span>
-                <span className="nkc-section-count">{filtered.length} articles</span>
-                <div className="nkc-layout-toggle">
-                  <button className={`nkc-toggle-btn ${layout === 'grid' ? 'active' : ''}`} onClick={() => setLayout('grid')}>⊞</button>
-                  <button className={`nkc-toggle-btn ${layout === 'list' ? 'active' : ''}`} onClick={() => setLayout('list')}>☰</button>
-                </div>
-              </div>
-              {filtered.length === 0 ? (
-                <div className="nkc-empty">
-                  <div className="nkc-empty-icon">🔍</div>
-                  <div className="nkc-empty-text">No articles found for "{search}"</div>
-                  <button className="nkc-empty-clear" onClick={() => { setSearch(''); setActiveCategory('All'); }}>Clear filters</button>
-                </div>
-              ) : (
-                <div className={layout === 'grid' ? 'nkc-articles-grid' : 'nkc-articles-list'}>
-                  {filtered.map(a => <ArticleCard key={a.id} article={a} bookmarks={bookmarks} onBookmark={toggleBookmark} onOpen={openReader} layout={layout} />)}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right sidebar */}
-          <aside className="nkc-right-sidebar">
-            <div className="nkc-widget">
-              <div className="nkc-widget-title"><span>🎯</span> Goal: <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{userGoal}</span></div>
-              <div className="nkc-widget-recs">
-                {(userGoal.toLowerCase().includes('muscle') || userGoal.toLowerCase().includes('gain')
-                  ? ARTICLES.filter(a => ['Muscle Gain', 'Protein', 'Supplements', 'Recovery Nutrition'].includes(a.category))
-                  : ARTICLES.filter(a => a.trending)
-                ).slice(0, 4).map(a => (
-                  <div key={a.id} className="nkc-widget-item" onClick={() => openReader(a)}>
-                    <span style={{ fontSize: 22, flexShrink: 0 }}>{a.emoji}</span>
-                    <div>
-                      <div className="nkc-widget-item-title">{a.title.length > 45 ? a.title.slice(0, 45) + '…' : a.title}</div>
-                      <div className="nkc-widget-item-meta">{a.readTime} min · <span style={{ color: catClr(a.category) }}>{a.category}</span></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="nkc-widget">
-              <div className="nkc-widget-title"><span>🔥</span> Trending This Week</div>
-              {trending.map((a, i) => (
-                <div key={a.id} className="nkc-widget-trending-item" onClick={() => openReader(a)} style={{ cursor: 'pointer' }}>
-                  <span className="nkc-trending-num">#{i + 1}</span>
-                  <div>
-                    <div className="nkc-widget-item-title">{a.title.length > 40 ? a.title.slice(0, 40) + '…' : a.title}</div>
-                    <div className="nkc-widget-item-meta">👁 {(a.views / 1000).toFixed(1)}k · {a.readTime} min</div>
+      {openArticle && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95">
+            <CardHeader className="border-b relative pb-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-4 top-4"
+                onClick={() => setOpenArticle(null)}
+              >
+                ✕
+              </Button>
+              <Badge className="w-fit mb-2">{openArticle.category}</Badge>
+              <CardTitle className="text-2xl">{openArticle.title}</CardTitle>
+              <CardDescription>
+                By {openArticle.author} · {openArticle.readTime} min read
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-y-auto p-6 space-y-6">
+              {openArticle.sections.map((sec, i) => (
+                <div key={i}>
+                  <h3 className="font-bold text-lg mb-2">{sec.heading}</h3>
+                  <div className="text-sm text-muted-foreground space-y-2 whitespace-pre-wrap">
+                    {sec.body}
                   </div>
                 </div>
               ))}
-            </div>
-
-            {bookmarked.length > 0 && (
-              <div className="nkc-widget">
-                <div className="nkc-widget-title"><span>🔖</span> Bookmarked ({bookmarked.length})</div>
-                {bookmarked.map(a => (
-                  <div key={a.id} className="nkc-widget-item" onClick={() => openReader(a)}>
-                    <span style={{ fontSize: 20, flexShrink: 0 }}>{a.emoji}</span>
-                    <div>
-                      <div className="nkc-widget-item-title">{a.title.length > 40 ? a.title.slice(0, 40) + '…' : a.title}</div>
-                      <div className="nkc-widget-item-meta">{a.readTime} min</div>
-                    </div>
-                    <button onClick={e => { e.stopPropagation(); toggleBookmark(a.id); }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 14, marginLeft: 'auto' }}>✕</button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="nkc-widget">
-              <div className="nkc-widget-title"><span>👩‍⚕️</span> Our Experts</div>
-              {[
-                { name: 'Dr. Sarah Chen', role: 'Sports Nutritionist', initials: 'SC', color: '#34d399' },
-                { name: 'Dr. Emily Zhao', role: 'Clinical Dietitian', initials: 'EZ', color: '#60a5fa' },
-                { name: 'Dr. Marcus Webb', role: 'Sports Medicine', initials: 'MW', color: '#a78bfa' },
-                { name: 'James Miller', role: 'Exercise Physiologist', initials: 'JM', color: '#22d3ee' },
-              ].map(e => (
-                <div key={e.name} className="nkc-expert-item">
-                  <div className="nkc-expert-avatar" style={{ background: `${e.color}22`, color: e.color, border: `1px solid ${e.color}44` }}>{e.initials}</div>
-                  <div>
-                    <div className="nkc-widget-item-title">{e.name}</div>
-                    <div className="nkc-widget-item-meta">{e.role}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="nkc-widget nkc-widget-path">
-              <div className="nkc-widget-title"><span>🗺️</span> Learning Path</div>
-              <div className="nkc-path-sub">Beginner → Intermediate → Advanced</div>
-              {[
-                { step: 1, title: 'Macronutrient Basics', done: true },
-                { step: 2, title: 'Caloric Balance', done: true },
-                { step: 3, title: 'Meal Planning', done: false },
-                { step: 4, title: 'Supplement Science', done: false },
-                { step: 5, title: 'Sport Nutrition', done: false },
-              ].map(p => (
-                <div key={p.step} className={`nkc-path-item ${p.done ? 'nkc-path-done' : ''}`}>
-                  <div className={`nkc-path-dot ${p.done ? 'nkc-path-dot-done' : ''}`}>{p.done ? '✓' : p.step}</div>
-                  <div className="nkc-path-label">{p.title}</div>
-                </div>
-              ))}
-            </div>
-          </aside>
+            </CardContent>
+          </Card>
         </div>
-      </main>
-    </div>
+      )}
+    </AppShell>
   );
 }

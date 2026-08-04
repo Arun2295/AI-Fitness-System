@@ -1,19 +1,9 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import type { UserData } from '../api';
 
-/**
- * Landing page for OAuth2 redirect:
- * http://localhost:3000/oauth2/callback?refreshToken=...&profileComplete=...
- *
- * The backend sends the user back here after Google login.
- * We store the refresh token and then fetch profile from cookie-protected API.
- *
- * IMPORTANT: Use relative URL (/api/users/me) so Vite dev proxy forwards it
- * to localhost:8081 with the correct cookie — direct cross-origin fetch would
- * be blocked by the browser's SameSite cookie policy.
- */
 export default function OAuth2CallbackPage() {
   const [params] = useSearchParams();
   const { setAuth } = useAuth();
@@ -34,8 +24,6 @@ export default function OAuth2CallbackPage() {
       return;
     }
 
-    // Use relative URL so Vite proxy sends the request to localhost:8081
-    // while preserving the accessToken cookie that was set by the backend.
     fetch('/api/users/me', {
       credentials: 'include',
     })
@@ -48,7 +36,6 @@ export default function OAuth2CallbackPage() {
         return res.json() as Promise<UserData>;
       })
       .then((user) => {
-        // Backend enums serialize to their name string — normalise
         const normalised: UserData = {
           ...user,
           role: typeof user.role === 'string' ? user.role : String(user.role),
@@ -69,21 +56,16 @@ export default function OAuth2CallbackPage() {
   }, []);
 
   return (
-    <div className="auth-page">
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>💪</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 16 }}>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+      <div className="flex flex-col items-center space-y-4">
+        <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10">
+          <span className="text-3xl">💪</span>
+        </div>
+        <p className="text-lg font-medium text-foreground">
           Completing sign-in…
         </p>
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%',
-          border: '3px solid var(--border)',
-          borderTopColor: 'var(--accent)',
-          animation: 'spin 0.8s linear infinite',
-          margin: '24px auto 0',
-        }} />
+        <Loader2 className="size-8 animate-spin text-primary" />
       </div>
     </div>
   );
 }
-
