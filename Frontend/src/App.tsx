@@ -5,6 +5,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import OAuth2CallbackPage from './pages/OAuth2CallbackPage';
+import NutritionPage from './pages/NutritionPage';
+import NutritionKnowledgePage from './pages/NutritionKnowledgePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -31,6 +33,14 @@ function AppRoutes() {
 
       <Route path="/dashboard" element={
         <ProtectedRoute><DashboardPage /></ProtectedRoute>
+      } />
+
+      <Route path="/nutrition" element={
+        <ProtectedRoute><NutritionPage /></ProtectedRoute>
+      } />
+
+      <Route path="/knowledge" element={
+        <ProtectedRoute><NutritionKnowledgePage /></ProtectedRoute>
       } />
 
       {/* OAuth2 callback from backend */}

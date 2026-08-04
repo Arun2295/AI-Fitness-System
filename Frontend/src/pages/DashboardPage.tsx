@@ -91,9 +91,9 @@ export default function DashboardPage() {
           <a className="nav-item" href="#dashboard">
             <span className="nav-icon">📈</span> Progress
           </a>
-          <a className="nav-item" href="#dashboard">
+          <Link className="nav-item" to="/nutrition">
             <span className="nav-icon">🥗</span> Nutrition
-          </a>
+          </Link>
           <a className="nav-item" href="#dashboard">
             <span className="nav-icon">🏋️</span> Workouts
           </a>
@@ -260,16 +260,17 @@ export default function DashboardPage() {
           <h2 className="card-title">⚡ Quick Actions</h2>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {[
-              { icon: '📝', label: 'Log Workout' },
-              { icon: '🥗', label: 'Log Meal' },
-              { icon: '⚖️', label: 'Update Weight' },
-              { icon: '💤', label: 'Log Sleep' },
-              { icon: '💧', label: 'Log Water' },
-            ].map(({ icon, label }) => (
+              { icon: '📝', label: 'Log Workout', path: '#' },
+              { icon: '🥗', label: 'Log Meal', path: '/nutrition' },
+              { icon: '⚖️', label: 'Update Weight', path: '#' },
+              { icon: '💤', label: 'Log Sleep', path: '#' },
+              { icon: '💧', label: 'Log Water', path: '#' },
+            ].map(({ icon, label, path }) => (
               <button
                 key={label}
                 className="btn btn-outline"
                 style={{ padding: '10px 20px', fontSize: 14 }}
+                onClick={() => path !== '#' && navigate(path)}
               >
                 {icon} {label}
               </button>

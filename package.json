@@ -1,0 +1,24 @@
+{
+  "name": "ai-fitness-system",
+  "version": "1.0.0",
+  "description": "A full-stack **AI-powered fitness platform** built with a microservice architecture. The system provides personalized fitness experiences with secure user management, JWT-based authentication, and a modern React frontend.",
+  "main": "index.js",
+ "scripts": {
+  "test": "echo \"No tests configured\"",
+  "prepare": "husky"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Arun2295/AI-Fitness-System.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Arun2295/AI-Fitness-System/issues"
+  },
+  "homepage": "https://github.com/Arun2295/AI-Fitness-System#readme",
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}

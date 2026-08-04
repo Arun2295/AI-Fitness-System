@@ -6,20 +6,17 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // Proxy REST API calls to Spring Boot backend
+      // All API calls go through the API Gateway
       '/api': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
-      // Only proxy the OAuth2 *start* flow to the backend
-      // /oauth2/authorization/google  →  backend starts the OIDC dance
       '/oauth2/authorization': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
-      // Backend → Google → Google redirects back to backend code-exchange endpoint
       '/login/oauth2': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
       // NOTE: /oauth2/callback is intentionally NOT proxied —
